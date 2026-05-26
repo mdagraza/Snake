@@ -29,7 +29,7 @@ BLOCK_SIZE = 10 #Tamaño de cada bloque de la serpiente y la comida
 COLLISION = True #Si colision contra la pared o no
 RESIZABLE = False #Si la ventana es redimensionable o no
 
-font = pygame.font.SysFont('arial', 25) #Fuente para mostrar la puntuación
+font = pygame.font.SysFont('arial', 15) #Fuente para mostrar la puntuación
 
 class SnakeGame:
     def __init__(self, w=640, h=480):
@@ -96,7 +96,7 @@ class SnakeGame:
         #Dibujar serpiente, primero cabeza y luego cuerpo
         pygame.draw.rect(self.display, Colors.GREEN1, pygame.Rect(self.head.x, self.head.y, BLOCK_SIZE, BLOCK_SIZE))
         for pt in self.snake[1:]:
-            pygame.draw.rect(self.display, Colors.GREEN2, pygame.Rect(pt.x, pt.y, BLOCK_SIZE, BLOCK_SIZE)) #Dibujar cada bloque de la serpiente en la pantalla usando un rectángulo verde (punto x, punto y, alto, ancho)
+            pygame.draw.rect(self.display, Colors.GREEN2, pygame.Rect(pt.x, pt.y, BLOCK_SIZE, BLOCK_SIZE)) #Dibujar cada bloque de la serpiente en la pantalla usando un rectángulo verde (punto x, punto y, ancho, alto)
 
         if self.food:
             pygame.draw.rect(self.display, Colors.RED, pygame.Rect(self.food.x, self.food.y, BLOCK_SIZE, BLOCK_SIZE))
