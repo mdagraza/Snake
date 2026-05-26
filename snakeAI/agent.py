@@ -1,5 +1,6 @@
 import torch
 import random
+import os
 import numpy as np
 from collections import deque #para almacenar las experiencias de entrenamiento
 from snake_game_AI import SnakeGameAI, Direction, Point
@@ -19,6 +20,10 @@ class SnakeAgent:
     
     self.model = Linear_QNet(11, 256, 3) #modelo de red neuronal con 11 entradas (estado), 256 neuronas en la capa oculta y 3 salidas (acciones)
     self.trainer = QTrainer(self.model, LR, self.gamma) #entrenador para actualizar los pesos del modelo en función de las experiencias de entrenamiento
+
+    if os.path.exists('./model/model.pth'):
+      self.model.load() #cargar el modelo si existe un archivo de modelo guardado
+    self._load_data() #cargar los datos de entrenamiento, como el número de juegos jugados y el valor de epsilon, para que puedan ser cargados en futuras sesiones de entrenamiento
 
   def get_state(self, game): #obtener el estado actual del juego, que se usará como entrada para la red neuronal
     #[peligro de frente, peligro de la derecha, peligro de la izquierda, dirección izquierda, dirección derecha, dirección arriba, dirección abajo, comida a la izquierda, comida a la derecha, comida arriba, comida abajo]
@@ -72,6 +77,8 @@ class SnakeAgent:
     states, actions, rewards, next_states, dones = zip(*mini_sample) #desempaquetar las experiencias del batch | zip(*mini_sample) separa cada elemento de las tuplas en mini_sample
     self.trainer.train_step(states, actions, rewards, next_states, dones)
 
+    self._save_data() #guardar los datos de entrenamiento, como el número de juegos jugados y el valor de epsilon, para que puedan ser cargados en futuras sesiones de entrenamiento
+
   def train_short_memory(self, state, action, reward, next_state, done): #entrenar con una sola experiencia
     self.trainer.train_step(state, action, reward, next_state, done) #entrenar el modelo con una sola experiencia
 
@@ -90,12 +97,27 @@ class SnakeAgent:
       final_move[move] = 1
 
     return final_move
+  
+  def _save_data(self):
+    with open('./model/data.txt', 'a') as f:
+      f.write(f'{self.n_games},{self.epsilon}\n')
+
+  def _load_data(self):
+    try:
+      with open('./model/data.txt', 'r') as f:
+        lines = f.readlines()
+        if lines:
+          last_line = lines[-1]
+          self.n_games, self.epsilon = map(int, last_line.strip().split(','))
+    except FileNotFoundError:
+      pass
 
 def train():
-  plot_scores = [] #para almacenar los puntajes de cada juego, que se pueden usar para visualizar el rendimiento del agente a lo largo del tiempo
-  plot_mean_scores = [] #para almacenar los puntajes promedio, que se pueden usar para visualizar el rendimiento del agente a lo largo del tiempo
-  total_score = 0 #para almacenar el puntaje total acumulado, que se puede usar para calcular el puntaje promedio
-  record = 0 #para almacenar el puntaje más alto alcanzado, que se puede usar para evaluar el rendimiento del agente
+  plot_scores = [] #para almacenar los puntajes de cada juego
+  plot_mean_scores = [] #para almacenar los puntajes promedio
+  total_score = 0 #para almacenar el puntaje total acumulado
+  record = 0 #para almacenar el puntaje más alto alcanzado
+  n_games = 0 #para almacenar el número de juegos jugados
   agent = SnakeAgent() 
   game = SnakeGameAI() 
 
@@ -119,18 +141,19 @@ def train():
     if done: #game over, entrenar con un batch de experiencias almacenadas y reiniciar el juego
       game.reset()
       agent.n_games += 1
+      n_games += 1
       agent.train_long_memory()
 
       if score > record:
         record = score
         agent.model.save() #guardar el modelo si se alcanza un nuevo récord
 
-      print('Game:', agent.n_games, '| Score:', score, '| Record:', record)
+      print('Game:', n_games, '| Score:', score, '| Record:', record, '| N Games:', agent.n_games, '| Epsilon:', agent.epsilon)
 
       #Plot
       plot_scores.append(score)
       total_score += score
-      mean_score = total_score / agent.n_games
+      mean_score = total_score / n_games
       plot_mean_scores.append(mean_score)
       plot(plot_scores, plot_mean_scores)
 
