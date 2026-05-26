@@ -11,6 +11,8 @@ MAX_MEMORY = 100_000 #maximo de experiencias a almacenar
 BATCH_SIZE = 1000 #tamaño del batch para el entrenamiento
 LR = 0.001 #learning rate | tasa de aprendizaje, que controla cuánto se ajustan los pesos del modelo en respuesta al error cada vez que se actualizan los pesos
 
+SAVE_AND_LOAD_MODEL = True #Si se debe guardar y cargar el modelo entrenado o no, lo que permite continuar el entrenamiento desde donde se dejó en sesiones anteriores
+
 class SnakeAgent:
   def __init__(self):
     self.n_games = 0
@@ -23,7 +25,8 @@ class SnakeAgent:
 
     if os.path.exists('./model/model.pth'):
       self.model.load() #cargar el modelo si existe un archivo de modelo guardado
-    self._load_data() #cargar los datos de entrenamiento, como el número de juegos jugados y el valor de epsilon, para que puedan ser cargados en futuras sesiones de entrenamiento
+    if SAVE_AND_LOAD_MODEL:
+      self._load_data() #cargar los datos de entrenamiento, como el número de juegos jugados y el valor de epsilon, para que puedan ser cargados en futuras sesiones de entrenamiento
 
   def get_state(self, game): #obtener el estado actual del juego, que se usará como entrada para la red neuronal
     #[peligro de frente, peligro de la derecha, peligro de la izquierda, dirección izquierda, dirección derecha, dirección arriba, dirección abajo, comida a la izquierda, comida a la derecha, comida arriba, comida abajo]
@@ -77,7 +80,8 @@ class SnakeAgent:
     states, actions, rewards, next_states, dones = zip(*mini_sample) #desempaquetar las experiencias del batch | zip(*mini_sample) separa cada elemento de las tuplas en mini_sample
     self.trainer.train_step(states, actions, rewards, next_states, dones)
 
-    self._save_data() #guardar los datos de entrenamiento, como el número de juegos jugados y el valor de epsilon, para que puedan ser cargados en futuras sesiones de entrenamiento
+    if SAVE_AND_LOAD_MODEL:
+      self._save_data() #guardar los datos de entrenamiento, como el número de juegos jugados y el valor de epsilon, para que puedan ser cargados en futuras sesiones de entrenamiento
 
   def train_short_memory(self, state, action, reward, next_state, done): #entrenar con una sola experiencia
     self.trainer.train_step(state, action, reward, next_state, done) #entrenar el modelo con una sola experiencia
@@ -146,7 +150,8 @@ def train():
 
       if score > record:
         record = score
-        agent.model.save() #guardar el modelo si se alcanza un nuevo récord
+        if SAVE_AND_LOAD_MODEL:
+          agent.model.save() #guardar el modelo si se alcanza un nuevo récord
 
       print('Game:', n_games, '| Score:', score, '| Record:', record, '| N Games:', agent.n_games, '| Epsilon:', agent.epsilon)
 
