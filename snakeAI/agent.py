@@ -3,7 +3,7 @@ import random
 import os
 import numpy as np
 from collections import deque #para almacenar las experiencias de entrenamiento
-from snake_game_AI import SnakeGameAI, Direction, Point
+from snake_game_AI import SnakeGameAI, Direction, Point, BLOCK_SIZE
 from model import Linear_QNet, QTrainer
 from helper import plot
 
@@ -31,10 +31,10 @@ class SnakeAgent:
   def get_state(self, game): #obtener el estado actual del juego, que se usará como entrada para la red neuronal
     #[peligro de frente, peligro de la derecha, peligro de la izquierda, dirección izquierda, dirección derecha, dirección arriba, dirección abajo, comida a la izquierda, comida a la derecha, comida arriba, comida abajo]
     head = game.snake[0] #obtener la cabeza de la serpiente
-    point_l = Point(head.x - 20, head.y) #punto a la izquierda de la cabeza
-    point_r = Point(head.x + 20, head.y) #punto a la derecha de la cabeza
-    point_u = Point(head.x, head.y - 20) #punto arriba de la cabeza
-    point_d = Point(head.x, head.y + 20) #punto abajo de la cabeza
+    point_l = Point(head.x - BLOCK_SIZE, head.y) #punto a la izquierda de la cabeza
+    point_r = Point(head.x + BLOCK_SIZE, head.y) #punto a la derecha de la cabeza
+    point_u = Point(head.x, head.y - BLOCK_SIZE) #punto arriba de la cabeza
+    point_d = Point(head.x, head.y + BLOCK_SIZE) #punto abajo de la cabeza
 
     dir_l = game.direction == Direction.LEFT #si la dirección actual es izquierda
     dir_r = game.direction == Direction.RIGHT #si la dirección actual es derecha
