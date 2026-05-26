@@ -30,7 +30,7 @@ Point = namedtuple('Point', 'x, y') #Definir un punto con coordenadas x e y | Si
 BLOCK_SIZE = 10 #Tamaño de cada bloque de la serpiente y la comida
 COLLISION = True #Si colision contra la pared o no
 RESIZABLE = False #Si la ventana es redimensionable o no
-INCREMENT_SPEED = False #Si la velocidad aumenta al comer comida o no
+INCREMENT_SPEED = True #Si la velocidad aumenta al comer comida o no
 
 
 font = pygame.font.SysFont('arial', 15) #Fuente para mostrar la puntuación
@@ -49,10 +49,10 @@ class SnakeGameAI:
 
     def reset(self):
         self.direction = Direction.RIGHT
-        self.speed = 10
+        self.speed = 50
 
         self.head = Point(self.w/2, self.h/2) #posicion inicial de la cabeza de la serpiente
-        self.snake = [self.head, Point(self.head.x - BLOCK_SIZE, self.head.y)] #cuerpo inicial de la serpiente con dos bloques, como se mueve inicialmente a la derecha, el segundo bloque se coloca a la izquierda de la cabeza
+        self.snake = [self.head, Point(self.head.x - BLOCK_SIZE, self.head.y), Point(self.head.x - 2 * BLOCK_SIZE, self.head.y)] #cuerpo inicial de la serpiente con tres bloques, como se mueve inicialmente a la derecha, los segundos y tercer bloque se coloca a la izquierda de la cabeza
 
         self.score = 0
         self.food = None
@@ -61,8 +61,8 @@ class SnakeGameAI:
 
     def _place_food(self):
         #Generar una coordenada x e y aleatoria que sea un múltiplo de BLOCK_SIZE para asegurar que la comida se alinee con la cuadrícula del juego
-        x = random.randint(0, (self.w - BLOCK_SIZE) // BLOCK_SIZE) * BLOCK_SIZE
-        y = random.randint(0, (self.h - BLOCK_SIZE) // BLOCK_SIZE) * BLOCK_SIZE
+        x = random.randint(0+BLOCK_SIZE, (self.w - BLOCK_SIZE*2) // BLOCK_SIZE) * BLOCK_SIZE
+        y = random.randint(0+BLOCK_SIZE, (self.h - BLOCK_SIZE*2) // BLOCK_SIZE) * BLOCK_SIZE
         self.food = Point(x, y)
 
         if self.food in self.snake:
@@ -83,7 +83,7 @@ class SnakeGameAI:
 
       #chequear colisiones
       game_over = False
-      if self._is_collision() or self.frame_iteration > 100 * len(self.snake): #Si la serpiente choca o si ha pasado demasiado tiempo sin comer comida, el juego termina
+      if self.is_collision() or self.frame_iteration > 100 * len(self.snake): #Si la serpiente choca o si ha pasado demasiado tiempo sin comer comida, el juego termina
           game_over = True
           reward = -10
           return reward, game_over, self.score
@@ -103,7 +103,7 @@ class SnakeGameAI:
       self.clock.tick(self.speed) #Controlar FPS del juego
 
       #devolver game_over y puntuacion
-      return game_over, self.score
+      return reward, game_over, self.score
     
     def _update_ui(self):
         self.display.fill(Colors.BLACK) #Limpia la pantalla, pintando todo
@@ -170,7 +170,7 @@ class SnakeGameAI:
 
         self.head = Point(x, y) #Actualizar la posición de la cabeza de la serpiente
 
-    def _is_collision(self, pt=None):
+    def is_collision(self, pt=None):
         if pt is None: #Si no se proporciona un punto específico para verificar la colisión, se verifica la colisión de la cabeza de la serpiente
             pt = self.head
 
