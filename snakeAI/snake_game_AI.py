@@ -5,9 +5,10 @@ import pygame
 
 import random
 from enum import Enum
-from collections import namedtuple
+from collections import namedtuple, deque
 import math
 import numpy as np #Para usar arrays en lugar de listas para representar el estado del juego, lo que puede ser más eficiente para el aprendizaje automático
+
 
 pygame.init() # Inicializar Pygame
 
@@ -59,6 +60,10 @@ class SnakeGameAI:
         self._place_food() #colocar la comida en una posición aleatoria
         self.frame_iteration = 0 #Contador de iteraciones para evitar que el juego se quede atascado en un bucle infinito sin comer comida
 
+        self.distance_food = 0
+
+        self.last_positions = deque(maxlen=100)
+
     def _place_food(self):
         #Generar una coordenada x e y aleatoria que sea un múltiplo de BLOCK_SIZE para asegurar que la comida se alinee con la cuadrícula del juego
         x = random.randint(0, (self.w - BLOCK_SIZE) // BLOCK_SIZE) * BLOCK_SIZE
@@ -70,6 +75,7 @@ class SnakeGameAI:
 
     def play_step(self, action):
       self.frame_iteration += 1
+      self.last_positions.append((self.head.x, self.head.y))
 
       #manejar eventos
       self._manage_events()
@@ -97,6 +103,17 @@ class SnakeGameAI:
           self._place_food() #Colocar una nueva comida en una posición aleatoria
       else:
           self.snake.pop() #Si no ha comido, se elimina el último bloque de la serpiente para simular el movimiento
+
+      #comprobar que no esta en un loop
+      unique_positions = len(set(self.last_positions))
+      unique_ratio = unique_positions / len(self.last_positions)
+      if unique_ratio < 0.4:
+        reward -= 2
+
+      #penalizar si no se acerca a la comida
+      distance_food = self._calculate_distance(self.head, self.food)
+      reward += (self.distance_food - distance_food) * 0.1
+      self.distance_food = distance_food
 
       #actualizar UI y reloj
       self._update_ui()
@@ -170,20 +187,22 @@ class SnakeGameAI:
 
         self.head = Point(x, y) #Actualizar la posición de la cabeza de la serpiente
 
-    def is_collision(self, pt=None):
+    def is_collision(self, pt=None, type=0):
         if pt is None: #Si no se proporciona un punto específico para verificar la colisión, se verifica la colisión de la cabeza de la serpiente
             pt = self.head
 
         #Chequear si la serpiente choca con las paredes
         if COLLISION:
-          if pt.x >= self.w or pt.x < 0 or pt.y >= self.h or pt.y < 0:
-              return True
+          if(type==0 or type==1):
+            if pt.x >= self.w or pt.x < 0 or pt.y >= self.h or pt.y < 0:
+                return True
         else:
           self._teleport() #Si no hay colisión, teletransportar la serpiente a la posición opuesta
 
         #Chequear si la serpiente choca consigo misma
-        if pt in self.snake[1:]: #Si la cabeza de la serpiente está en el resto del cuerpo, significa que se ha mordido a sí misma
-            return True
+        if(type==0 or type==2):
+            if pt in self.snake[1:]: #Si la cabeza de la serpiente está en el resto del cuerpo, significa que se ha mordido a sí misma
+                return True
 
         return False
     
@@ -199,6 +218,9 @@ class SnakeGameAI:
             self.head = Point(self.head.x, self.h - BLOCK_SIZE)
 
         self.snake[0] = self.head #Actualizar la posición de la cabeza en el cuerpo de la serpiente después de teletransportarla
+
+    def _calculate_distance(self, point1, point2):
+        return math.sqrt(math.pow((point2.x-point1.x),2)+math.pow((point2.y-point1.y),2))
 
 '''if __name__ == "__main__":
     game = SnakeGameAI()

@@ -1,3 +1,5 @@
+import math
+
 import torch
 import random
 import os
@@ -20,7 +22,7 @@ class SnakeAgent:
     self.gamma = 0.9 #factor de descuento para futuras recompensas, que determina la importancia de las recompensas futuras en comparación con las recompensas inmediatas (Menos de 1 hace que el agente valore más las recompensas inmediatas, mientras que un valor cercano a 1 hace que el agente valore más las recompensas futuras)
     self.memory = deque(maxlen=MAX_MEMORY) #memoria para almacenar experiencias de entrenamiento | Se borra automáticamente la experiencia más antigua cuando se alcanza el límite de memoria
     
-    self.model = Linear_QNet(11, 256, 3) #modelo de red neuronal con 11 entradas (estado), 256 neuronas en la capa oculta y 3 salidas (acciones)
+    self.model = Linear_QNet(17, 256, 3) #modelo de red neuronal con 11 entradas (estado), 256 neuronas en la capa oculta y 3 salidas (acciones)
     self.trainer = QTrainer(self.model, LR, self.gamma) #entrenador para actualizar los pesos del modelo en función de las experiencias de entrenamiento
 
     if os.path.exists('./model/model.pth'):
@@ -41,6 +43,17 @@ class SnakeAgent:
     dir_u = game.direction == Direction.UP #si la dirección actual es arriba
     dir_d = game.direction == Direction.DOWN #si la dirección actual es abajo
 
+    dx, dy = {
+      Direction.RIGHT: (1, 0),
+      Direction.LEFT: (-1, 0),
+      Direction.UP: (0, -1),
+      Direction.DOWN: (0, 1)
+    }[game.direction]
+
+    front = [dx, dy]
+    left  = [-dy, dx]
+    right = [dy, -dx]
+
     state = [
         #peligro de frente
         (dir_r and game.is_collision(point_r)) or (dir_l and game.is_collision(point_l)) or (dir_u and game.is_collision(point_u)) or (dir_d and game.is_collision(point_d)),
@@ -48,6 +61,18 @@ class SnakeAgent:
         (dir_u and game.is_collision(point_r)) or (dir_d and game.is_collision(point_l)) or (dir_l and game.is_collision(point_u)) or (dir_r and game.is_collision(point_d)),
         #peligro de la izquierda
         (dir_d and game.is_collision(point_r)) or (dir_u and game.is_collision(point_l)) or (dir_r and game.is_collision(point_u)) or (dir_l and game.is_collision(point_d)),
+        #espacio de frente contra la pared
+        self._free_distance(front, game, 1),
+        #espacio derecha contra la pared
+        self._free_distance(right, game, 1),
+        #espacio izquierda contra la pared
+        self._free_distance(left, game, 1),
+        #espacio de frente contra si misma
+        self._free_distance(front, game, 2),
+        #espacio derecha contra si misma
+        self._free_distance(right, game, 2),
+        #espacio izquierda contra si misma
+        self._free_distance(left, game, 2),
         #dirección izquierda
         dir_l,
         #dirección derecha
@@ -56,17 +81,22 @@ class SnakeAgent:
         dir_u,
         #dirección abajo
         dir_d,
-        #comida a la izquierda
+        game.head.x/game.w,
+        game.head.y/game.h,
+        game.food.x/game.w,
+        game.food.y/game.h
+    ]
+    '''#comida a la izquierda
         game.food.x < game.head.x,
         #comida a la derecha
         game.food.x > game.head.x,
         #comida arriba
         game.food.y < game.head.y,
         #comida abajo
-        game.food.y > game.head.y
-    ]
+        game.food.y > game.head.y'''
 
-    return np.array(state, dtype=int) #convertir el estado a un array de numpy, que se usará como entrada para la red neuronal | Convierte los booleans a enteros (0 o 1) para que puedan ser procesados por la red neuronal
+    #return np.array(state, dtype=int) #convertir el estado a un array de numpy, que se usará como entrada para la red neuronal | Convierte los booleans a enteros (0 o 1) para que puedan ser procesados por la red neuronal
+    return np.array(state, dtype=np.float32)
 
   def remember(self, state, action, reward, next_state, done): #almacenar la experiencia en la memoria
     self.memory.append((state, action, reward, next_state, done)) #agregar la experiencia a la memoria
@@ -115,6 +145,28 @@ class SnakeAgent:
           self.n_games, self.epsilon = map(int, last_line.strip().split(','))
     except FileNotFoundError:
       pass
+
+  def _free_distance(self, direction, game, type=0):
+    dist = 0
+    x, y = game.head.x, game.head.y
+    max_distance = max(game.w, game.h) / BLOCK_SIZE
+
+    while True:
+        x += direction[0] * BLOCK_SIZE
+        y += direction[1] * BLOCK_SIZE
+
+        new_point = Point(x, y)
+
+        if game.is_collision(new_point, type):
+          break
+
+        if(new_point.x > game.w or new_point.y > game.h or new_point.x < 0 or new_point.y < 0):
+          dist = 0
+          break
+
+        dist += 1
+
+    return dist / max_distance
 
 def train():
   plot_scores = [] #para almacenar los puntajes de cada juego
