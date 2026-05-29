@@ -118,10 +118,12 @@ class SnakeAgent:
 
   def get_action(self, state): #decidir la acción a tomar en base al estado actual
     #movimientos aleatorios: equilibrio entre exploración y explotación
-    self.epsilon = 80 - self.n_games #a medida que el agente juega más juegos, la probabilidad de tomar una acción aleatoria disminuye
+    #self.epsilon = 80 - self.n_games #a medida que el agente juega más juegos, la probabilidad de tomar una acción aleatoria disminuye
+    self.epsilon = max(0.05, 0.995 ** self.n_games)
     final_move = [0, 0, 0] #inicializar la acción a tomar | [1, 0, 0] -> ir recto | [0, 1, 0] -> girar a la derecha | [0, 0, 1] -> girar a la izquierda
 
-    if random.randint(0, 200) < self.epsilon:
+    #if random.randint(0, 200) < self.epsilon:
+    if random.random() < self.epsilon:
       move = random.randint(0, 2)
       final_move[move] = 1
     else:
